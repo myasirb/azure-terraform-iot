@@ -24,6 +24,22 @@ variable "storage_account_name" {
   type        = string
 }
 
+variable "container_name" {
+  description = "The name of the blob storage in the container. Must be between 3 and 24 characters in length and may contain numbers and lowercase letters only."
+  type        = string
+}
+
+
+variable "end_point_name" {
+  description = "The name of the IoT Hub endpoint. Used to define where the messages from devices will be sent."
+  type        = string
+}
+
+variable "route_name" {
+  description = "The name of the IoT Hub message routing rule. It identifies the route to direct device messages to specific endpoints."
+  type        = string
+}
+
 # Azure Service Principal Variables (populated from tfvars)
 variable "subscription_id" {
   description = "The Azure Subscription ID"

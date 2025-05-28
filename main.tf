@@ -9,9 +9,12 @@ resource "azurerm_storage_account" "iot_storage" {
   resource_group_name      = azurerm_resource_group.iot_rg.name
   location                 = azurerm_resource_group.iot_rg.location
   account_tier             = "Standard"
-  account_replication_type = "LRS"
+  account_replication_type = "RAGRS"
   min_tls_version          = "TLS1_2"
-
+  account_kind             = "StorageV2"
+  is_hns_enabled           = true
+  allow_nested_items_to_be_public = false
+  
   tags = {
     environment = var.environment
   }
@@ -19,8 +22,8 @@ resource "azurerm_storage_account" "iot_storage" {
 
 # Create a blob container for storing IoT data
 resource "azurerm_storage_container" "iot_container" {
-  name                  = "iotdata"
-  storage_account_name  = azurerm_storage_account.iot_storage.name
+  name                  = var.container_name
+  storage_account_id  = azurerm_storage_account.iot_storage.id
   container_access_type = "private"
 }
 
@@ -41,29 +44,22 @@ resource "azurerm_iothub" "iot_hub" {
   # Define the storage endpoint directly in the IoT Hub resource
   endpoint {
     type                       = "AzureIotHub.StorageContainer"
-    name                       = "storage"
+    name                       = var.end_point_name
     container_name             = azurerm_storage_container.iot_container.name
     connection_string          = azurerm_storage_account.iot_storage.primary_blob_connection_string
-    file_name_format           = "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}"
-    batch_frequency_in_seconds = 60
-    max_chunk_size_in_bytes    = 10485760
+    file_name_format           = "{iothub}/{partition}/{YYYY}/{MM}/{DD}/{HH}/{mm}.json"
+    batch_frequency_in_seconds = 100
+    max_chunk_size_in_bytes    = 104857600
     encoding                   = "JSON"
-  }
-  # Route for device messages to storage endpoint
-  route {
-    name           = "storage-route"
-    source         = "DeviceMessages"
-    condition      = "true" # Route all messages to storage
-    endpoint_names = ["storage"]
-    enabled        = true
+    resource_group_name = azurerm_resource_group.iot_rg.name
   }
 
-  # Route for device messages to built-in events endpoint (default)
+  # Route for device messages to storage endpoint
   route {
-    name           = "events-route"
+    name           = var.route_name
     source         = "DeviceMessages"
-    condition      = "true" # Route all messages to events endpoint
-    endpoint_names = ["events"]
+    condition      = "true" # Route all messages to storage
+    endpoint_names = [var.end_point_name]
     enabled        = true
   }
 }
